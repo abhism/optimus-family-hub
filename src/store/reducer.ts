@@ -32,7 +32,36 @@ const pushNotification = (
 export function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'SET_MODE': {
-      const next = { ...state, mode: action.mode }
+      let next = { ...state, mode: action.mode }
+
+      /**
+       * Entering the onboarding mode should land on the invitation itself, not
+       * on a chooser. Auto-select the most recently sent pending invite unless
+       * a specific one is already in flight (set by "Open X's invite" in the
+       * User app, which targets a member explicitly).
+       *
+       * The picker is still the fallback when nothing is pending — otherwise
+       * the mode would be a dead end.
+       */
+      if (action.mode === 'onboarding') {
+        const inFlight = next.members.find(
+          (m) => m.id === next.onboarding.memberId && m.status !== 'removed',
+        )
+        if (!inFlight) {
+          const target = next.members
+            .filter((m) => m.status === 'pending')
+            .sort(
+              (a, b) =>
+                new Date(b.invite.sentAt).getTime() -
+                new Date(a.invite.sentAt).getTime(),
+            )[0]
+          next = {
+            ...next,
+            onboarding: { memberId: target?.id ?? null, step: 0 },
+          }
+        }
+      }
+
       return { ...next, stack: [rootScreen(action.mode, next)] }
     }
 

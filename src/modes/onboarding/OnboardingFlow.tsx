@@ -69,6 +69,10 @@ export function OnboardingFlow({ memberId }: { memberId: string }) {
 
     if (step >= TOTAL_STEPS - 1) {
       // Step 10 — land in the existing-member home for this relationship.
+      // Clear the in-flight invite first: setup is finished, so re-entering
+      // Mode 2 should pick up the next pending invite rather than replay this
+      // member's completed flow.
+      dispatch({ type: 'ONBOARDING_EXIT' })
       setMode(isChild ? 'member-child' : 'member-spouse')
       return
     }
@@ -83,16 +87,17 @@ export function OnboardingFlow({ memberId }: { memberId: string }) {
     patchMember,
   }
 
-  const back = () => {
-    if (step === 0) {
-      dispatch({ type: 'ONBOARDING_EXIT' })
-      return
-    }
-    goTo(step - 1)
-  }
+  const back = () => goTo(step - 1)
 
-  // Card details and PIN can't be un-issued, so back is disabled after issue.
-  const canGoBack = step < 5
+  // Step 0 is now the mode's entry point, so there is nothing above it to go
+  // back to — leaving the mode is the switcher's job. Card details and PIN
+  // can't be un-issued, so back also stops once the card exists.
+  const canGoBack = step > 0 && step < 5
+
+  /** Other invitations still waiting, reachable from the landing step. */
+  const otherPending = state.members.filter(
+    (m) => m.status === 'pending' && m.id !== member.id,
+  )
 
   return (
     <>
@@ -123,6 +128,34 @@ export function OnboardingFlow({ memberId }: { memberId: string }) {
         {step === 6 && <AddToWallet {...props} />}
         {step === 7 && <SetPin {...props} />}
         {step === 8 && <PhysicalCardOnItsWay {...props} />}
+
+        {/*
+          Auto-selecting the newest invite means a second pending invite would
+          otherwise be unreachable from the mode switcher, so offer it here.
+        */}
+        {step === 0 && otherPending.length > 0 && (
+          <div className="mt-6 border-t border-line pt-4 text-center">
+            <p className="text-[12px] text-ink-muted">
+              {otherPending.length === 1
+                ? 'Another invitation is waiting'
+                : `${otherPending.length} other invitations are waiting`}
+            </p>
+            <div className="mt-2 flex flex-wrap justify-center gap-2">
+              {otherPending.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() =>
+                    dispatch({ type: 'ONBOARDING_START', memberId: m.id })
+                  }
+                  className="tap rounded-full border border-line bg-white px-3 py-1.5 text-[12.5px] font-semibold text-accent shadow-card hover:bg-accent-soft/50"
+                >
+                  Open {firstName(m.name)}’s invite
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </ScreenBody>
     </>
   )
