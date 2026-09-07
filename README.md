@@ -1,11 +1,17 @@
 # Optimus — Family Hub
 
+**[▶ Live demo](https://abhism.github.io/optimus-family-hub/)**
+
 A clickable prototype of a neobank feature that lets an accountholder issue
 **add-on cards** to family members. No backend, no API — all state is local,
 mocked, and persisted to `localStorage`.
 
 React + Vite + TypeScript · Tailwind CSS · lucide-react · React Context +
 `useReducer`.
+
+> Nothing here touches a real financial system. "Optimus" is invented, the
+> account and card numbers are fake, and every transaction is simulated in the
+> browser.
 
 ---
 
@@ -28,6 +34,16 @@ Other scripts:
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run audit:copy` | Enforces the Member-facing copy rules (see below) |
 | `npm run verify` | Typecheck + copy audit + build |
+
+## Deployment
+
+Pushing to `main` builds and deploys to GitHub Pages via
+`.github/workflows/deploy.yml`. The workflow runs `npm run verify`, so the copy
+audit gates the deploy: if a Member screen ever loses its funds disclosure, the
+deploy fails rather than shipping.
+
+`vite.config.ts` sets `base` to `/optimus-family-hub/` **for builds only**, so
+Pages gets the right asset paths while `npm run dev` stays at the root.
 
 ---
 
